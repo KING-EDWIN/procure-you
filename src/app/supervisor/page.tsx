@@ -9,9 +9,37 @@ const roleIcon = (
   </span>
 );
 
+// Add interfaces for forms and history
+interface FormHistoryEntry {
+  role: string;
+  date: string;
+  action: string;
+  signature?: string;
+}
+interface LineItem { quantity: string; unit: string; particulars: string; unitPrice: string; total: string; }
+interface WorkflowForm {
+  id: number;
+  title: string;
+  type: string;
+  status: string;
+  currentRole: string;
+  created: string;
+  data: {
+    department?: string;
+    requestor?: string;
+    needBy?: string;
+    subject?: string;
+    comments?: string;
+    detailsUnderItems?: string;
+    lineItems?: LineItem[];
+    [key: string]: any;
+  };
+  history: FormHistoryEntry[];
+}
+
 export default function SupervisorDashboard() {
   const { forms, signAndSend } = useWorkflow();
-  const [selectedForm, setSelectedForm] = useState<any>(null);
+  const [selectedForm, setSelectedForm] = useState<WorkflowForm | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -22,12 +50,12 @@ export default function SupervisorDashboard() {
 
   // Compute enhanced stats for supervisor
   const supervisorName = "Sarah Supervisor"; // You can make this dynamic if needed
-  const handledForms = forms.filter(f => f.history.some((h: any) => h.role === 'supervisor'));
+  const handledForms = forms.filter(f => f.history.some((h: FormHistoryEntry) => h.role === 'supervisor'));
   const approvedForms = handledForms.filter(f => f.status.toLowerCase().includes('approved'));
   const rejectedForms = handledForms.filter(f => f.status.toLowerCase().includes('rejected'));
   const avgApprovalTime = (() => {
     const times = handledForms.map(f => {
-      const supervisorEntry = f.history.find((h: any) => h.role === 'supervisor');
+      const supervisorEntry = f.history.find((h: FormHistoryEntry) => h.role === 'supervisor');
       if (!supervisorEntry) return null;
       const created = new Date(f.created).getTime();
       const approvedDate = new Date(supervisorEntry.date).getTime();
@@ -38,19 +66,19 @@ export default function SupervisorDashboard() {
   })();
 
   // Approval trail mini component
-  const ApprovalTrail = ({ form }: { form: any }) => {
+  const ApprovalTrail = ({ form }: { form: WorkflowForm }) => {
     const steps = ['claimant', 'supervisor', 'procurement', 'gm', 'secretary', 'treasurer'];
     return (
       <div className="flex items-center gap-1 mt-2">
         {steps.map((role, idx) => {
-          const done = form.history.some((h: any) => h.role === role);
+          const done = form.history.some((h: FormHistoryEntry) => h.role === role);
           return <span key={role} className={`w-2 h-2 rounded-full ${done ? 'bg-yellow-500' : 'bg-gray-200'}`}></span>;
         })}
       </div>
     );
   };
 
-  const handleSign = (form: any) => {
+  const handleSign = (form: WorkflowForm) => {
     setSelectedForm(form);
     setShowModal(true);
     setName("");
@@ -160,7 +188,7 @@ export default function SupervisorDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedForm.data.lineItems && selectedForm.data.lineItems.map((item: any, idx: number) => (
+                      {selectedForm.data.lineItems && selectedForm.data.lineItems.map((item: LineItem, idx: number) => (
                         <tr key={idx}>
                           <td className="border px-2 py-1 text-center">{idx + 1}</td>
                           <td className="border px-2 py-1">{item.quantity}</td>
@@ -178,7 +206,7 @@ export default function SupervisorDashboard() {
               <div className="mb-6">
                 <div className="font-semibold mb-2 text-yellow-900">Approval Trail & Signatures</div>
                 <div className="space-y-2">
-                  {selectedForm.history && selectedForm.history.map((entry: any, idx: number) => {
+                  {selectedForm.history && selectedForm.history.map((entry: FormHistoryEntry, idx: number) => {
                     const signatureData = entry.signature ? JSON.parse(entry.signature) : null;
                     return (
                       <div key={idx} className="flex items-center gap-4 border rounded p-2 bg-yellow-50">

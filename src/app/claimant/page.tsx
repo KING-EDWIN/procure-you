@@ -28,7 +28,9 @@ export default function ClaimantDashboard() {
     lineItems: [ { ...defaultLineItem } as LineItem ],
     detailsUnderItems: "",
   });
-  const [submittedForm, setSubmittedForm] = useState<any>(null);
+  // Update the type for submittedForm to include optional 'id':
+  type SubmittedForm = typeof form & { id?: number };
+  const [submittedForm, setSubmittedForm] = useState<SubmittedForm | null>(null);
   const formRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
   const [tab, setTab] = useState<'inbox' | 'history'>('inbox');
 
@@ -62,7 +64,7 @@ export default function ClaimantDashboard() {
     setShowForm(false);
   };
 
-  const handleDownloadPDF = async (req: any, id: number) => {
+  const handleDownloadPDF = async (req: typeof form, id: number) => {
     const ref = formRefs.current[id];
     if (!ref) return;
     const canvas = await html2canvas(ref, { scale: 2 });
@@ -102,7 +104,10 @@ export default function ClaimantDashboard() {
   })();
 
   // Approval trail mini component
-  const ApprovalTrail = ({ form }: { form: any }) => {
+  type ApprovalTrailForm = {
+    history: { role: string }[];
+  };
+  const ApprovalTrail = ({ form }: { form: ApprovalTrailForm }) => {
     const steps = ['claimant', 'supervisor', 'procurement', 'gm', 'secretary', 'treasurer'];
     return (
       <div className="flex items-center gap-1 mt-2">
@@ -321,7 +326,7 @@ export default function ClaimantDashboard() {
                 Download as PDF
               </button>
             </div>
-            <div ref={(el: HTMLDivElement | null) => { formRefs.current[submittedForm.id] = el; }} className="bg-white border rounded-xl p-6 shadow max-w-2xl mx-auto text-sm">
+            <div ref={(el: HTMLDivElement | null) => { formRefs.current[submittedForm.id || 0] = el; }} className="bg-white border rounded-xl p-6 shadow max-w-2xl mx-auto text-sm">
               <div className="flex justify-between mb-2">
                 <div><span className="font-bold">Requestor:</span> {submittedForm.requestor}</div>
                 <div><span className="font-bold">Department:</span> {submittedForm.department}</div>
@@ -342,7 +347,7 @@ export default function ClaimantDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {submittedForm.lineItems.map((item: any, idx: number) => (
+                  {submittedForm.lineItems.map((item: LineItem, idx: number) => (
                     <tr key={idx}>
                       <td className="border px-2 py-1 text-center">{idx + 1}</td>
                       <td className="border px-2 py-1">{item.quantity}</td>

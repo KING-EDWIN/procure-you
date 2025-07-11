@@ -17,6 +17,29 @@ import {
 } from 'chart.js';
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
+// Add interfaces for forms and history
+interface FormHistoryEntry {
+  role: string;
+  date: string;
+  action: string;
+  signature?: string;
+}
+interface WorkflowForm {
+  id: number;
+  title: string;
+  type: string;
+  status: string;
+  currentRole: string;
+  created: string;
+  data: {
+    department?: string;
+    requestor?: string;
+    lineItems?: PaymentLineItem[];
+    [key: string]: any;
+  };
+  history: FormHistoryEntry[];
+}
+
 // --- DEMO DATA ---
 const demoPayments = [
   {
@@ -89,12 +112,12 @@ const roleIcon = (
 );
 
 // Utility to convert forms to CSV
-function formsToCSV(forms: any[]) {
+function formsToCSV(forms: WorkflowForm[]) {
   const headers = [
     'ID', 'Title', 'Type', 'Status', 'Current Handler', 'Created', 'Department', 'Requestor', 'Approval Trail'
   ];
   const rows = forms.map(f => {
-    const approvalTrail = (f.history || []).map((h: any) => {
+    const approvalTrail = (f.history || []).map((h: FormHistoryEntry) => {
       const sig = h.signature ? JSON.parse(h.signature) : {};
       return `${h.role} (${sig.name || ''}) [${h.date}: ${h.action}]`;
     }).join(' | ');
@@ -114,7 +137,7 @@ function formsToCSV(forms: any[]) {
   return csvContent;
 }
 
-function downloadCSV(forms: any[], filename = 'forms_export.csv') {
+function downloadCSV(forms: WorkflowForm[], filename = 'forms_export.csv') {
   const csv = formsToCSV(forms);
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -201,16 +224,16 @@ export default function ProcurementDashboard() {
   const uniqueRoles = [...new Set(forms.map(f => f.currentRole))];
 
   // Compute enhanced stats for procurement officer
-  const handledForms = forms.filter(f => f.history.some((h: any) => h.role === 'procurement'));
+  const handledForms = forms.filter(f => f.history.some((h: FormHistoryEntry) => h.role === 'procurement'));
   const approvedForms = handledForms.filter(f => f.status.toLowerCase().includes('approved'));
   const rejectedForms = handledForms.filter(f => f.status.toLowerCase().includes('rejected'));
   const totalApprovedValue = approvedForms.reduce((sum, f) => {
     if (!f.data.lineItems) return sum;
-    return sum + f.data.lineItems.reduce((itemSum: number, item: any) => itemSum + (Number(item.total) || 0), 0);
+    return sum + f.data.lineItems.reduce((itemSum: number, item: PaymentLineItem) => itemSum + (Number(item.total) || 0), 0);
   }, 0);
   const avgApprovalTime = (() => {
     const times = handledForms.map(f => {
-      const procurementEntry = f.history.find((h: any) => h.role === 'procurement');
+      const procurementEntry = f.history.find((h: FormHistoryEntry) => h.role === 'procurement');
       if (!procurementEntry) return null;
       const created = new Date(f.created).getTime();
       const approvedDate = new Date(procurementEntry.date).getTime();
@@ -224,7 +247,7 @@ export default function ProcurementDashboard() {
   const departmentCounts: Record<string, number> = {};
   const monthCounts: Record<string, number> = {};
   const itemCounts: Record<string, number> = {};
-  forms.forEach((f: any) => {
+  forms.forEach((f: WorkflowForm) => {
     // Pie: Requests by Department
     if (f.data && f.data.department) {
       departmentCounts[f.data.department] = (departmentCounts[f.data.department] || 0) + 1;
@@ -236,7 +259,7 @@ export default function ProcurementDashboard() {
     }
     // Top 5 Items
     if (f.data && f.data.lineItems) {
-      f.data.lineItems.forEach((item: any) => {
+      f.data.lineItems.forEach((item: PaymentLineItem) => {
         if (item.particulars) {
           itemCounts[item.particulars] = (itemCounts[item.particulars] || 0) + Number(item.quantity || 1);
         }
@@ -280,7 +303,7 @@ export default function ProcurementDashboard() {
   };
 
   // --- APPROVAL TRAIL COMPONENT ---
-  const ApprovalTrail = ({ form }: { form: any }) => {
+  const ApprovalTrail = ({ form }: { form: WorkflowForm }) => {
     const workflowSteps = [
       { role: 'claimant', label: 'Claimant', color: 'bg-blue-500' },
       { role: 'supervisor', label: 'Supervisor', color: 'bg-yellow-500' },
@@ -291,7 +314,7 @@ export default function ProcurementDashboard() {
     ];
 
     const getStepStatus = (stepRole: string) => {
-      const historyEntry = form.history.find((h: any) => h.role === stepRole);
+      const historyEntry = form.history.find((h: FormHistoryEntry) => h.role === stepRole);
       const isCurrent = form.currentRole === stepRole;
       const isCompleted = !!historyEntry;
       
@@ -331,7 +354,7 @@ export default function ProcurementDashboard() {
             <div className="text-gray-500 italic">No approvals yet</div>
           ) : (
             <div className="space-y-1">
-              {form.history.map((entry: any, index: number) => {
+              {form.history.map((entry: FormHistoryEntry, index: number) => {
                 const signatureData = entry.signature ? JSON.parse(entry.signature) : null;
                 return (
                   <div key={index} className="flex items-center justify-between bg-white rounded px-2 py-1 border">

@@ -51,10 +51,23 @@ const mockInventoryItems = [
   },
 ];
 
+// Define InventoryItem interface
+interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  unitPrice: number;
+  totalValue: number;
+  status: string;
+  lowStock: boolean;
+  minStock: number;
+}
+
 export default function InventoryManagerInventoryPage() {
   const [showAddItem, setShowAddItem] = useState(false);
   const [showAdjustStock, setShowAdjustStock] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -73,7 +86,7 @@ export default function InventoryManagerInventoryPage() {
   const lowStockItems = mockInventoryItems.filter(item => item.lowStock).length;
   const outOfStockItems = mockInventoryItems.filter(item => item.status === "Out of Stock").length;
 
-  const handleAdjustStock = (item: any) => {
+  const handleAdjustStock = (item: InventoryItem) => {
     setSelectedItem(item);
     setShowAdjustStock(true);
   };
