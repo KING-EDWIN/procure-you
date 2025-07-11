@@ -3,8 +3,20 @@
 import React, { useState } from "react";
 import DashboardLayout from "../../dashboard-layout";
 
-// Mock data for procurement officer's pending requisitions
-const mockPendingRequisitions = [
+// Interface definition
+interface ProcurementRequisition {
+  id: string;
+  date: string;
+  department: string;
+  requestor: string;
+  items: number;
+  totalAmount: number;
+  status: string;
+  budgeted: string;
+}
+
+// Mock data for Procurement Officer's procurement approvals
+const mockPendingRequisitions: ProcurementRequisition[] = [
   {
     id: "PR-001",
     date: "2024-01-15",
@@ -37,7 +49,7 @@ const mockPendingRequisitions = [
   },
 ];
 
-const mockApprovedRequisitions = [
+const mockApprovedRequisitions: ProcurementRequisition[] = [
   {
     id: "PR-004",
     date: "2024-01-10",
@@ -51,7 +63,7 @@ const mockApprovedRequisitions = [
 ];
 
 export default function ProcurementOfficerProcurementPage() {
-  const [selectedRequisition, setSelectedRequisition] = useState<any>(null);
+  const [selectedRequisition, setSelectedRequisition] = useState<ProcurementRequisition | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   const getStatusColor = (status: string) => {
@@ -73,7 +85,7 @@ export default function ProcurementOfficerProcurementPage() {
       : "bg-orange-100 text-orange-800";
   };
 
-  const handleApprove = (requisition: any) => {
+  const handleApprove = (requisition: ProcurementRequisition) => {
     setSelectedRequisition(requisition);
     setShowApprovalModal(true);
   };

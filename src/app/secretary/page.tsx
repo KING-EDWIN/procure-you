@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useWorkflow, WorkflowForm, Role, PaymentLineItem } from "../workflow-context";
+import { useWorkflow, WorkflowForm, PaymentLineItem } from "../workflow-context";
 
 const roleIcon = (
   <span className="inline-block bg-indigo-100 text-indigo-600 rounded-full p-2 mr-2">
