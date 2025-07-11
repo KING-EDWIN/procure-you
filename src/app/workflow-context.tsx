@@ -6,6 +6,76 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 export type Role = "claimant" | "supervisor" | "procurement" | "gm" | "secretary" | "treasurer";
 export type FormType = "requisition" | "payment" | "lpo" | "voucher";
 
+export type PaymentLineItem = { quantity: string; unit: string; particulars: string; unitPrice: string; total: string };
+export type LPOItem = { particulars: string; quantity: string; unitPrice: string; amount: string };
+
+export interface RequisitionFormData {
+  requestor: string;
+  department: string;
+  needBy: string;
+  subject: string;
+  comments: string;
+  signature: File | null;
+  lineItems: PaymentLineItem[];
+  detailsUnderItems: string;
+}
+
+export interface PaymentFormData {
+  requestor: string;
+  department: string;
+  needBy: string;
+  subject: string;
+  comments: string;
+  signature: File | null;
+  lineItems: PaymentLineItem[];
+  detailsUnderItems: string;
+  approvals: {
+    claimant: { name: string; date: string; signed: boolean };
+    procurement: { name: string; date: string; signed: boolean };
+    gm: { name: string; date: string; signed: boolean };
+    secretary: { name: string; date: string; signed: boolean };
+    treasurer: { name: string; date: string; signed: boolean };
+  };
+}
+
+export interface LPOFormData {
+  orderNo: string;
+  supplierName: string;
+  orderDate: string;
+  modeOfPayment: string;
+  deliveryDate: string;
+  items: LPOItem[];
+  grandTotal: string;
+  preparedBy: string;
+  verifiedBy: string;
+  verifiedDate: string;
+  approvedBy: string;
+  authorisedBy: string;
+}
+
+export interface VoucherFormData {
+  voucherNo: string;
+  date: string;
+  payee: string;
+  chequeNo: string;
+  bank: string;
+  particulars: string;
+  amount: string;
+  amountWords: string;
+  preparedBy: string;
+  checkedBy: string;
+  approvedBy: string;
+  receivedBy: string;
+  honTreasurer: string;
+  honSecretary: string;
+}
+
+export type WorkflowFormData =
+  | ({ type: "requisition" } & RequisitionFormData)
+  | ({ type: "payment" } & PaymentFormData)
+  | ({ type: "lpo" } & LPOFormData)
+  | ({ type: "voucher" } & VoucherFormData);
+
 export interface WorkflowForm {
   id: number;
   type: FormType;
@@ -14,7 +84,7 @@ export interface WorkflowForm {
   status: string;
   currentRole: Role;
   history: { role: Role; date: string; action: string; signature?: string }[];
-  data: any; // All form fields
+  data: WorkflowFormData;
 }
 
 interface WorkflowContextType {
@@ -42,6 +112,7 @@ const initialForms: WorkflowForm[] = [
       },
     ],
     data: {
+      type: "requisition",
       requestor: "Nwesige Joann",
       department: "Maintenance/IT",
       needBy: "2025-06-25",
@@ -67,6 +138,7 @@ const initialForms: WorkflowForm[] = [
       { role: "supervisor", date: "2025-06-19", action: "signed & sent", signature: JSON.stringify({ name: "Bob", signatureUrl: "" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Alice",
       department: "IT",
       needBy: "2025-06-30",
@@ -93,6 +165,7 @@ const initialForms: WorkflowForm[] = [
       { role: "procurement", date: "2025-06-18", action: "signed & sent", signature: JSON.stringify({ name: "Eve", signatureUrl: "" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Chris",
       department: "Finance",
       needBy: "2025-07-01",
@@ -120,6 +193,7 @@ const initialForms: WorkflowForm[] = [
       { role: "gm", date: "2025-06-17", action: "signed & sent", signature: JSON.stringify({ name: "Isaac", signatureUrl: "" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Faith",
       department: "Admin",
       needBy: "2025-07-05",
@@ -148,6 +222,7 @@ const initialForms: WorkflowForm[] = [
       { role: "secretary", date: "2025-06-16", action: "signed & sent", signature: JSON.stringify({ name: "Nina", signatureUrl: "" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Joy",
       department: "Events",
       needBy: "2025-07-10",
@@ -175,6 +250,7 @@ const initialForms: WorkflowForm[] = [
       { role: "secretary", date: "2025-06-15", action: "signed & sent", signature: JSON.stringify({ name: "Helen Secretary", signatureUrl: "https://ui-avatars.com/api/?name=Helen+Secretary" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Edwin King",
       department: "Research & Development",
       needBy: "2025-07-20",
@@ -206,6 +282,7 @@ const initialForms: WorkflowForm[] = [
       { role: "treasurer", date: "2025-01-15", action: "approved", signature: JSON.stringify({ name: "Frank Treasurer", signatureUrl: "https://ui-avatars.com/api/?name=Frank+Treasurer" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Alice",
       department: "IT",
       needBy: "2025-01-20",
@@ -232,6 +309,7 @@ const initialForms: WorkflowForm[] = [
       { role: "procurement", date: "2025-02-07", action: "signed & sent", signature: JSON.stringify({ name: "Ivy Procurement", signatureUrl: "https://ui-avatars.com/api/?name=Ivy+Procurement" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Grace",
       department: "Events",
       needBy: "2025-02-15",
@@ -259,6 +337,7 @@ const initialForms: WorkflowForm[] = [
       { role: "gm", date: "2025-03-15", action: "signed & sent", signature: JSON.stringify({ name: "Linda GM", signatureUrl: "https://ui-avatars.com/api/?name=Linda+GM" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Isaac",
       department: "Admin",
       needBy: "2025-03-20",
@@ -288,6 +367,7 @@ const initialForms: WorkflowForm[] = [
       { role: "secretary", date: "2025-04-22", action: "signed & sent", signature: JSON.stringify({ name: "Quinn Secretary", signatureUrl: "https://ui-avatars.com/api/?name=Quinn+Secretary" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Moses",
       department: "IT",
       needBy: "2025-04-30",
@@ -312,6 +392,7 @@ const initialForms: WorkflowForm[] = [
       { role: "claimant", date: "2025-05-10", action: "signed & sent", signature: JSON.stringify({ name: "Rita", signatureUrl: "https://ui-avatars.com/api/?name=Rita" }) },
     ],
     data: {
+      type: "requisition",
       requestor: "Rita",
       department: "Facilities",
       needBy: "2025-05-15",

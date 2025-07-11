@@ -1,41 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useWorkflow } from "../workflow-context";
+import { useWorkflow, WorkflowForm, Role, PaymentLineItem } from "../workflow-context";
 
 const roleIcon = (
   <span className="inline-block bg-yellow-100 text-yellow-600 rounded-full p-2 mr-2">
     <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" strokeWidth="2"/><path d="M8 12h8M12 8v8" stroke="currentColor" strokeWidth="2"/></svg>
   </span>
 );
-
-// Add interfaces for forms and history
-interface FormHistoryEntry {
-  role: string;
-  date: string;
-  action: string;
-  signature?: string;
-}
-interface LineItem { quantity: string; unit: string; particulars: string; unitPrice: string; total: string; }
-interface WorkflowForm {
-  id: number;
-  title: string;
-  type: string;
-  status: string;
-  currentRole: string;
-  created: string;
-  data: {
-    department?: string;
-    requestor?: string;
-    needBy?: string;
-    subject?: string;
-    comments?: string;
-    detailsUnderItems?: string;
-    lineItems?: LineItem[];
-    [key: string]: any;
-  };
-  history: FormHistoryEntry[];
-}
 
 export default function SupervisorDashboard() {
   const { forms, signAndSend } = useWorkflow();
@@ -50,12 +22,12 @@ export default function SupervisorDashboard() {
 
   // Compute enhanced stats for supervisor
   const supervisorName = "Sarah Supervisor"; // You can make this dynamic if needed
-  const handledForms = forms.filter(f => f.history.some((h: FormHistoryEntry) => h.role === 'supervisor'));
+  const handledForms = forms.filter(f => f.history.some((h) => h.role === 'supervisor'));
   const approvedForms = handledForms.filter(f => f.status.toLowerCase().includes('approved'));
   const rejectedForms = handledForms.filter(f => f.status.toLowerCase().includes('rejected'));
   const avgApprovalTime = (() => {
     const times = handledForms.map(f => {
-      const supervisorEntry = f.history.find((h: FormHistoryEntry) => h.role === 'supervisor');
+      const supervisorEntry = f.history.find((h) => h.role === 'supervisor');
       if (!supervisorEntry) return null;
       const created = new Date(f.created).getTime();
       const approvedDate = new Date(supervisorEntry.date).getTime();
@@ -71,7 +43,7 @@ export default function SupervisorDashboard() {
     return (
       <div className="flex items-center gap-1 mt-2">
         {steps.map((role, idx) => {
-          const done = form.history.some((h: FormHistoryEntry) => h.role === role);
+          const done = form.history.some((h) => h.role === role);
           return <span key={role} className={`w-2 h-2 rounded-full ${done ? 'bg-yellow-500' : 'bg-gray-200'}`}></span>;
         })}
       </div>
@@ -103,6 +75,11 @@ export default function SupervisorDashboard() {
     signAndSend(id, JSON.stringify({ name, signatureUrl }), "procurement", "Awaiting Procurement Officer Action");
     setShowModal(false);
   };
+
+  // Add a type guard for requisition data:
+  function isRequisitionData(data: any): data is { requestor: string; department: string; needBy: string; subject: string; comments: string; detailsUnderItems: string; lineItems: any[] } {
+    return data && data.type === "requisition";
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-white p-6 flex flex-col items-center">
@@ -166,47 +143,55 @@ export default function SupervisorDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
                   <div><span className="font-semibold">Type:</span> {selectedForm.type}</div>
                   <div><span className="font-semibold">Created:</span> {selectedForm.created}</div>
-                  <div><span className="font-semibold">Requestor:</span> {selectedForm.data.requestor}</div>
-                  <div><span className="font-semibold">Department:</span> {selectedForm.data.department}</div>
-                  <div><span className="font-semibold">Need By:</span> {selectedForm.data.needBy}</div>
-                  <div><span className="font-semibold">Subject:</span> {selectedForm.data.subject}</div>
+                  {isRequisitionData(selectedForm.data) && (
+                    <>
+                      <div><span className="font-semibold">Requestor:</span> {selectedForm.data.requestor}</div>
+                      <div><span className="font-semibold">Department:</span> {selectedForm.data.department}</div>
+                      <div><span className="font-semibold">Need By:</span> {selectedForm.data.needBy}</div>
+                      <div><span className="font-semibold">Subject:</span> {selectedForm.data.subject}</div>
+                    </>
+                  )}
                 </div>
-                <div className="mb-2"><span className="font-semibold">Comments:</span> {selectedForm.data.comments}</div>
-                <div className="mb-2"><span className="font-semibold">Details/Notes:</span> {selectedForm.data.detailsUnderItems}</div>
-                {/* Line Items Table */}
-                <div className="mb-4">
-                  <div className="font-semibold mb-1">Line Items</div>
-                  <table className="w-full border text-xs mb-2">
-                    <thead>
-                      <tr className="bg-yellow-200">
-                        <th className="border px-2 py-1">No.</th>
-                        <th className="border px-2 py-1">Quantity</th>
-                        <th className="border px-2 py-1">Unit</th>
-                        <th className="border px-2 py-1">Particulars</th>
-                        <th className="border px-2 py-1">Unit Price</th>
-                        <th className="border px-2 py-1">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedForm.data.lineItems && selectedForm.data.lineItems.map((item: LineItem, idx: number) => (
-                        <tr key={idx}>
-                          <td className="border px-2 py-1 text-center">{idx + 1}</td>
-                          <td className="border px-2 py-1">{item.quantity}</td>
-                          <td className="border px-2 py-1">{item.unit}</td>
-                          <td className="border px-2 py-1">{item.particulars}</td>
-                          <td className="border px-2 py-1">{item.unitPrice}</td>
-                          <td className="border px-2 py-1">{item.total}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {isRequisitionData(selectedForm.data) && (
+                  <>
+                    <div className="mb-2"><span className="font-semibold">Comments:</span> {selectedForm.data.comments}</div>
+                    <div className="mb-2"><span className="font-semibold">Details/Notes:</span> {selectedForm.data.detailsUnderItems}</div>
+                    {/* Line Items Table */}
+                    <div className="mb-4">
+                      <div className="font-semibold mb-1">Line Items</div>
+                      <table className="w-full border text-xs mb-2">
+                        <thead>
+                          <tr className="bg-yellow-200">
+                            <th className="border px-2 py-1">No.</th>
+                            <th className="border px-2 py-1">Quantity</th>
+                            <th className="border px-2 py-1">Unit</th>
+                            <th className="border px-2 py-1">Particulars</th>
+                            <th className="border px-2 py-1">Unit Price</th>
+                            <th className="border px-2 py-1">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedForm.data.lineItems && selectedForm.data.lineItems.map((item: PaymentLineItem, idx: number) => (
+                            <tr key={idx}>
+                              <td className="border px-2 py-1 text-center">{idx + 1}</td>
+                              <td className="border px-2 py-1">{item.quantity}</td>
+                              <td className="border px-2 py-1">{item.unit}</td>
+                              <td className="border px-2 py-1">{item.particulars}</td>
+                              <td className="border px-2 py-1">{item.unitPrice}</td>
+                              <td className="border px-2 py-1">{item.total}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
               {/* Approval Trail with Signatures */}
               <div className="mb-6">
                 <div className="font-semibold mb-2 text-yellow-900">Approval Trail & Signatures</div>
                 <div className="space-y-2">
-                  {selectedForm.history && selectedForm.history.map((entry: FormHistoryEntry, idx: number) => {
+                  {selectedForm.history && selectedForm.history.map((entry: { role: Role; date: string; action: string; signature?: string }, idx: number) => {
                     const signatureData = entry.signature ? JSON.parse(entry.signature) : null;
                     return (
                       <div key={idx} className="flex items-center gap-4 border rounded p-2 bg-yellow-50">

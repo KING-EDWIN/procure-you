@@ -82,10 +82,30 @@ const mockLocalPurchaseOrders = [
   },
 ];
 
+// Define interfaces for PaymentRequisition and LocalPurchaseOrder
+interface PaymentRequisition {
+  id: string;
+  date: string;
+  requestor: string;
+  purpose: string;
+  amount: number;
+  status: string;
+  approvalLevel: string;
+}
+interface LocalPurchaseOrder {
+  id: string;
+  date: string;
+  supplier: string;
+  purpose: string;
+  amount: number;
+  status: string;
+  paymentStatus: string;
+}
+
 export default function AccountantFinancePage() {
   const [activeTab, setActiveTab] = useState("payment-requisitions");
   const [showNewLPO, setShowNewLPO] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocument, setSelectedDocument] = useState<PaymentRequisition | LocalPurchaseOrder | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   const getStatusColor = (status: string) => {
@@ -124,10 +144,18 @@ export default function AccountantFinancePage() {
     }
   };
 
-  const handleApprove = (document: any) => {
+  const handleApprove = (document: PaymentRequisition | LocalPurchaseOrder) => {
     setSelectedDocument(document);
     setShowApprovalModal(true);
   };
+
+  // Add type guards for selectedDocument
+  function isPaymentRequisition(doc: PaymentRequisition | LocalPurchaseOrder): doc is PaymentRequisition {
+    return (doc as PaymentRequisition).requestor !== undefined;
+  }
+  function isLocalPurchaseOrder(doc: PaymentRequisition | LocalPurchaseOrder): doc is LocalPurchaseOrder {
+    return (doc as LocalPurchaseOrder).supplier !== undefined;
+  }
 
   return (
     <DashboardLayout userRole="accountant">
@@ -423,7 +451,7 @@ export default function AccountantFinancePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Requestor</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedDocument.requestor}</p>
+                      <p className="mt-1 text-sm text-gray-900">{isPaymentRequisition(selectedDocument) ? selectedDocument.requestor : selectedDocument.supplier}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Amount</label>

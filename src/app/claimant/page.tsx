@@ -3,10 +3,9 @@
 import React, { useState, useRef } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { useWorkflow } from "../workflow-context";
+import { useWorkflow, PaymentLineItem, RequisitionFormData, WorkflowForm } from "../workflow-context";
 
-type LineItem = { [key: string]: string; quantity: string; unit: string; particulars: string; unitPrice: string; total: string };
-const defaultLineItem: LineItem = { quantity: '', unit: '', particulars: '', unitPrice: '', total: '' };
+const defaultLineItem: PaymentLineItem = { quantity: '', unit: '', particulars: '', unitPrice: '', total: '' };
 
 const roleIcon = (
   <span className="inline-block bg-blue-100 text-blue-600 rounded-full p-2 mr-2">
@@ -18,25 +17,24 @@ export default function ClaimantDashboard() {
   const { forms, addForm, signAndSend } = useWorkflow();
   const claimantName = "Nwesige Joann";
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<RequisitionFormData & { type: "requisition" }>({
+    type: "requisition",
     requestor: "Nwesige Joann",
     department: "Maintenance/IT",
     needBy: "",
     subject: "",
     comments: "",
-    signature: null as File | null,
-    lineItems: [ { ...defaultLineItem } as LineItem ],
+    signature: null,
+    lineItems: [ { ...defaultLineItem } ],
     detailsUnderItems: "",
   });
-  // Update the type for submittedForm to include optional 'id':
-  type SubmittedForm = typeof form & { id?: number };
-  const [submittedForm, setSubmittedForm] = useState<SubmittedForm | null>(null);
+  const [submittedForm, setSubmittedForm] = useState<(RequisitionFormData & { type: "requisition" }) | null>(null);
   const formRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
   const [tab, setTab] = useState<'inbox' | 'history'>('inbox');
 
-  const handleLineItemChange = (idx: number, field: string, value: string) => {
+  const handleLineItemChange = (idx: number, field: keyof PaymentLineItem, value: string) => {
     const updated = [...form.lineItems];
-    (updated[idx] as LineItem)[field] = value;
+    updated[idx][field] = value;
     // Auto-calculate total if qty and unitPrice are present
     if ((field === 'quantity' || field === 'unitPrice') && updated[idx].quantity && updated[idx].unitPrice) {
       updated[idx].total = String(Number(updated[idx].quantity) * Number(updated[idx].unitPrice));
@@ -44,8 +42,8 @@ export default function ClaimantDashboard() {
     setForm({ ...form, lineItems: updated });
   };
 
-  const addLineItem = () => setForm({ ...form, lineItems: [...form.lineItems, { ...defaultLineItem } as LineItem] });
-  const removeLineItem = (idx: number) => setForm({ ...form, lineItems: form.lineItems.filter((_, i) => i !== idx) });
+  const addLineItem = () => setForm({ ...form, lineItems: [...form.lineItems, { ...defaultLineItem }] });
+  const removeLineItem = (idx: number) => setForm({ ...form, lineItems: form.lineItems.filter((_item, i) => i !== idx) });
 
   const handleSignature = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, signature: e.target.files?.[0] || null });
@@ -58,13 +56,25 @@ export default function ClaimantDashboard() {
       title: form.subject || "Untitled",
       status: "Draft (Not Submitted)",
       currentRole: "claimant",
-      data: { ...form, requestor: claimantName },
+      data: { ...form, type: "requisition", requestor: claimantName },
     });
     setSubmittedForm(form);
     setShowForm(false);
   };
 
-  const handleDownloadPDF = async (req: typeof form, id: number) => {
+  function isRequisitionData(data: any): data is RequisitionFormData & { type: "requisition" } {
+    return data && data.type === "requisition";
+  }
+  const handleDownloadPDF = async (req: RequisitionFormData | WorkflowForm, id: number) => {
+    let data: RequisitionFormData | null = null;
+    if ('data' in req) {
+      if (isRequisitionData(req.data)) {
+        data = req.data;
+      }
+    } else if (isRequisitionData(req)) {
+      data = req;
+    }
+    if (!data) return;
     const ref = formRefs.current[id];
     if (!ref) return;
     const canvas = await html2canvas(ref, { scale: 2 });
@@ -79,15 +89,15 @@ export default function ClaimantDashboard() {
   };
 
   // Split forms for inbox/history
-  const inboxForms = forms.filter(f => f.currentRole === 'claimant' && f.data.requestor === claimantName);
-  const historyForms = forms.filter(f => f.data.requestor === claimantName);
+  const inboxForms = forms.filter(f => f.currentRole === 'claimant' && isRequisitionData(f.data) && f.data.requestor === claimantName);
+  const historyForms = forms.filter(f => isRequisitionData(f.data) && f.data.requestor === claimantName);
 
   // Compute enhanced stats
   const approvedForms = historyForms.filter(f => f.status.toLowerCase().includes('approved'));
   const rejectedForms = historyForms.filter(f => f.status.toLowerCase().includes('rejected'));
   const totalApprovedValue = approvedForms.reduce((sum, f) => {
-    if (!f.data.lineItems) return sum;
-    return sum + f.data.lineItems.reduce((itemSum: number, item: any) => itemSum + (Number(item.total) || 0), 0);
+    if (!isRequisitionData(f.data) || !f.data.lineItems) return sum;
+    return sum + f.data.lineItems.reduce((itemSum: number, item: PaymentLineItem) => itemSum + (Number(item.total) || 0), 0);
   }, 0);
   // Average approval time (if history has timestamps)
   const avgApprovalTime = (() => {
@@ -104,15 +114,12 @@ export default function ClaimantDashboard() {
   })();
 
   // Approval trail mini component
-  type ApprovalTrailForm = {
-    history: { role: string }[];
-  };
-  const ApprovalTrail = ({ form }: { form: ApprovalTrailForm }) => {
+  const ApprovalTrail = ({ form }: { form: WorkflowForm }) => {
     const steps = ['claimant', 'supervisor', 'procurement', 'gm', 'secretary', 'treasurer'];
     return (
       <div className="flex items-center gap-1 mt-2">
         {steps.map((role, idx) => {
-          const done = form.history.some((h: any) => h.role === role);
+          const done = form.history.some((h) => h.role === role);
           return <span key={role} className={`w-2 h-2 rounded-full ${done ? 'bg-blue-500' : 'bg-gray-200'}`}></span>;
         })}
       </div>
@@ -183,7 +190,7 @@ export default function ClaimantDashboard() {
                   <div className="mt-2 sm:mt-0 flex flex-col sm:items-end gap-2">
                     <button
                       className="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-green-700 mt-2"
-                      onClick={() => handleDownloadPDF(form.data, form.id)}
+                      onClick={() => handleDownloadPDF(form, form.id)}
                     >
                       Download PDF
                     </button>
@@ -219,7 +226,7 @@ export default function ClaimantDashboard() {
                   <div className="mt-2 sm:mt-0 flex flex-col sm:items-end gap-2">
                     <button
                       className="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-green-700 mt-2"
-                      onClick={() => handleDownloadPDF(form.data, form.id)}
+                      onClick={() => handleDownloadPDF(form, form.id)}
                     >
                       Download PDF
                     </button>
@@ -314,19 +321,18 @@ export default function ClaimantDashboard() {
             </div>
           </div>
         )}
-        {/* PDF Preview and Download for most recent form */}
         {submittedForm && (
           <div className="mt-8">
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-bold text-blue-900">Requisition Preview</h2>
               <button
                 className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 shadow"
-                onClick={() => handleDownloadPDF(submittedForm, submittedForm.id || 0)}
+                onClick={() => handleDownloadPDF(submittedForm, 0)}
               >
                 Download as PDF
               </button>
             </div>
-            <div ref={(el: HTMLDivElement | null) => { formRefs.current[submittedForm.id || 0] = el; }} className="bg-white border rounded-xl p-6 shadow max-w-2xl mx-auto text-sm">
+            <div className="bg-white border rounded-xl p-6 shadow max-w-2xl mx-auto text-sm">
               <div className="flex justify-between mb-2">
                 <div><span className="font-bold">Requestor:</span> {submittedForm.requestor}</div>
                 <div><span className="font-bold">Department:</span> {submittedForm.department}</div>
@@ -347,7 +353,7 @@ export default function ClaimantDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {submittedForm.lineItems.map((item: LineItem, idx: number) => (
+                  {submittedForm.lineItems.map((item, idx) => (
                     <tr key={idx}>
                       <td className="border px-2 py-1 text-center">{idx + 1}</td>
                       <td className="border px-2 py-1">{item.quantity}</td>

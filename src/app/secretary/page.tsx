@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useWorkflow } from "../workflow-context";
+import { useWorkflow, WorkflowForm, PaymentLineItem, RequisitionFormData } from "../workflow-context";
 
 const roleIcon = (
   <span className="inline-block bg-indigo-100 text-indigo-600 rounded-full p-2 mr-2">
@@ -9,32 +9,8 @@ const roleIcon = (
   </span>
 );
 
-// Add interfaces for forms and history
-interface FormHistoryEntry {
-  role: string;
-  date: string;
-  action: string;
-  signature?: string;
-}
-interface LineItem { quantity: string; unit: string; particulars: string; unitPrice: string; total: string; }
-interface WorkflowForm {
-  id: number;
-  title: string;
-  type: string;
-  status: string;
-  currentRole: string;
-  created: string;
-  data: {
-    department?: string;
-    requestor?: string;
-    needBy?: string;
-    subject?: string;
-    comments?: string;
-    detailsUnderItems?: string;
-    lineItems?: LineItem[];
-    [key: string]: any;
-  };
-  history: FormHistoryEntry[];
+function isRequisitionData(data: any): data is RequisitionFormData & { type: "requisition" } {
+  return data && data.type === "requisition";
 }
 
 export default function SecretaryDashboard() {
@@ -50,12 +26,12 @@ export default function SecretaryDashboard() {
 
   // Compute enhanced stats for Secretary
   const secretaryName = "Helen Secretary"; // You can make this dynamic if needed
-  const handledForms = forms.filter(f => f.history.some((h: FormHistoryEntry) => h.role === 'secretary'));
+  const handledForms = forms.filter(f => f.history.some((h: any) => h.role === 'secretary'));
   const approvedForms = handledForms.filter(f => f.status.toLowerCase().includes('approved'));
   const rejectedForms = handledForms.filter(f => f.status.toLowerCase().includes('rejected'));
   const avgApprovalTime = (() => {
     const times = handledForms.map(f => {
-      const secretaryEntry = f.history.find((h: FormHistoryEntry) => h.role === 'secretary');
+      const secretaryEntry = f.history.find((h: any) => h.role === 'secretary');
       if (!secretaryEntry) return null;
       const created = new Date(f.created).getTime();
       const approvedDate = new Date(secretaryEntry.date).getTime();
@@ -71,7 +47,7 @@ export default function SecretaryDashboard() {
     return (
       <div className="flex items-center gap-1 mt-2">
         {steps.map((role, idx) => {
-          const done = form.history.some((h: FormHistoryEntry) => h.role === role);
+          const done = form.history.some((h: any) => h.role === role);
           return <span key={role} className={`w-2 h-2 rounded-full ${done ? 'bg-indigo-500' : 'bg-gray-200'}`}></span>;
         })}
       </div>
@@ -166,47 +142,56 @@ export default function SecretaryDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
                   <div><span className="font-semibold">Type:</span> {selectedForm.type}</div>
                   <div><span className="font-semibold">Created:</span> {selectedForm.created}</div>
-                  <div><span className="font-semibold">Requestor:</span> {selectedForm.data.requestor}</div>
-                  <div><span className="font-semibold">Department:</span> {selectedForm.data.department}</div>
-                  <div><span className="font-semibold">Need By:</span> {selectedForm.data.needBy}</div>
-                  <div><span className="font-semibold">Subject:</span> {selectedForm.data.subject}</div>
+                  {isRequisitionData(selectedForm.data) && (
+                    <>
+                      <div><span className="font-semibold">Requestor:</span> {selectedForm.data.requestor}</div>
+                      <div><span className="font-semibold">Department:</span> {selectedForm.data.department}</div>
+                      <div><span className="font-semibold">Need By:</span> {selectedForm.data.needBy}</div>
+                      <div><span className="font-semibold">Subject:</span> {selectedForm.data.subject}</div>
+                    </>
+                  )}
                 </div>
-                <div className="mb-2"><span className="font-semibold">Comments:</span> {selectedForm.data.comments}</div>
-                <div className="mb-2"><span className="font-semibold">Details/Notes:</span> {selectedForm.data.detailsUnderItems}</div>
-                {/* Line Items Table */}
-                <div className="mb-4">
-                  <div className="font-semibold mb-1">Line Items</div>
-                  <table className="w-full border text-xs mb-2">
-                    <thead>
-                      <tr className="bg-indigo-200">
-                        <th className="border px-2 py-1">No.</th>
-                        <th className="border px-2 py-1">Quantity</th>
-                        <th className="border px-2 py-1">Unit</th>
-                        <th className="border px-2 py-1">Particulars</th>
-                        <th className="border px-2 py-1">Unit Price</th>
-                        <th className="border px-2 py-1">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedForm.data.lineItems && selectedForm.data.lineItems.map((item: LineItem, idx: number) => (
-                        <tr key={idx}>
-                          <td className="border px-2 py-1 text-center">{idx + 1}</td>
-                          <td className="border px-2 py-1">{item.quantity}</td>
-                          <td className="border px-2 py-1">{item.unit}</td>
-                          <td className="border px-2 py-1">{item.particulars}</td>
-                          <td className="border px-2 py-1">{item.unitPrice}</td>
-                          <td className="border px-2 py-1">{item.total}</td>
+                {isRequisitionData(selectedForm.data) && (
+                  <>
+                    <div className="mb-2"><span className="font-semibold">Comments:</span> {selectedForm.data.comments}</div>
+                    <div className="mb-2"><span className="font-semibold">Details/Notes:</span> {selectedForm.data.detailsUnderItems}</div>
+                  </>
+                )}
+                {isRequisitionData(selectedForm.data) && selectedForm.data.lineItems && (
+                  <div className="mb-4">
+                    <div className="font-semibold mb-1">Line Items</div>
+                    <table className="w-full border text-xs mb-2">
+                      <thead>
+                        <tr className="bg-indigo-200">
+                          <th className="border px-2 py-1">No.</th>
+                          <th className="border px-2 py-1">Quantity</th>
+                          <th className="border px-2 py-1">Unit</th>
+                          <th className="border px-2 py-1">Particulars</th>
+                          <th className="border px-2 py-1">Unit Price</th>
+                          <th className="border px-2 py-1">Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {selectedForm.data.lineItems.map((item: PaymentLineItem, idx: number) => (
+                          <tr key={idx}>
+                            <td className="border px-2 py-1 text-center">{idx + 1}</td>
+                            <td className="border px-2 py-1">{item.quantity}</td>
+                            <td className="border px-2 py-1">{item.unit}</td>
+                            <td className="border px-2 py-1">{item.particulars}</td>
+                            <td className="border px-2 py-1">{item.unitPrice}</td>
+                            <td className="border px-2 py-1">{item.total}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
               {/* Approval Trail with Signatures */}
               <div className="mb-6">
                 <div className="font-semibold mb-2 text-indigo-900">Approval Trail & Signatures</div>
                 <div className="space-y-2">
-                  {selectedForm.history && selectedForm.history.map((entry: FormHistoryEntry, idx: number) => {
+                  {selectedForm.history && selectedForm.history.map((entry: any, idx: number) => {
                     const signatureData = entry.signature ? JSON.parse(entry.signature) : null;
                     return (
                       <div key={idx} className="flex items-center gap-4 border rounded p-2 bg-indigo-50">

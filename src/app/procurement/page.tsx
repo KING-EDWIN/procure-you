@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { useWorkflow } from "../workflow-context";
+import { useWorkflow, WorkflowForm, PaymentLineItem, LPOItem, VoucherFormData, PaymentFormData, LPOFormData } from "../workflow-context";
 import { Pie, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -17,84 +17,88 @@ import {
 } from 'chart.js';
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
-// Add interfaces for forms and history
-interface FormHistoryEntry {
-  role: string;
-  date: string;
-  action: string;
-  signature?: string;
-}
-interface WorkflowForm {
+// Local types for demo and local state
+interface DemoPayment {
   id: number;
   title: string;
-  type: string;
   status: string;
-  currentRole: string;
   created: string;
-  data: {
-    department?: string;
-    requestor?: string;
-    lineItems?: PaymentLineItem[];
-    [key: string]: any;
-  };
-  history: FormHistoryEntry[];
+  data: PaymentFormData;
+}
+interface DemoLPO {
+  id: number;
+  orderNo: string;
+  orderDate: string;
+  supplierName: string;
+  data: LPOFormData;
+}
+interface DemoVoucher {
+  id: number;
+  voucherNo: string;
+  date: string;
+  data: VoucherFormData;
 }
 
-// --- DEMO DATA ---
-const demoPayments = [
+const demoPayments: DemoPayment[] = [
   {
     id: 1,
     title: "Membership Cards Payment",
     status: "Pending General Manager Approval",
     created: "2025-06-13",
-    requestor: "Nwesige Joann",
-    department: "Maintenance/IT",
-    needBy: "2025-06-20",
-    subject: "Membership Cards",
-    comments: "",
-    signature: null as File | null,
-    lineItems: [
-      { quantity: "15", unit: "Cards", particulars: "Membership Cards for delivery Note 2025-18 of 7th June 2025", unitPrice: "25000", total: "375000" },
-      { quantity: "1", unit: "VAT", particulars: "18% V.A.T", unitPrice: "67500", total: "67500" },
-    ],
-    detailsUnderItems: "Card Names attached",
-    approvals: {
-      claimant: { name: "Nwesige Joann", date: "2025-06-13", signed: true },
-      procurement: { name: "Donna", date: "2025-06-13", signed: true },
-      gm: { name: "", date: "", signed: false },
-      secretary: { name: "", date: "", signed: false },
-      treasurer: { name: "", date: "", signed: false },
+    data: {
+      requestor: "Nwesige Joann",
+      department: "Maintenance/IT",
+      needBy: "2025-06-20",
+      subject: "Membership Cards",
+      comments: "",
+      signature: null,
+      lineItems: [
+        { quantity: "15", unit: "Cards", particulars: "Membership Cards for delivery Note 2025-18 of 7th June 2025", unitPrice: "25000", total: "375000" },
+        { quantity: "1", unit: "VAT", particulars: "18% V.A.T", unitPrice: "67500", total: "67500" },
+      ],
+      detailsUnderItems: "Card Names attached",
+      approvals: {
+        claimant: { name: "Nwesige Joann", date: "2025-06-13", signed: true },
+        procurement: { name: "Donna", date: "2025-06-13", signed: true },
+        gm: { name: "", date: "", signed: false },
+        secretary: { name: "", date: "", signed: false },
+        treasurer: { name: "", date: "", signed: false },
+      },
     },
   },
 ];
-const demoLPOs = [
-  { id: 1, orderNo: 'LPO-001', orderDate: '2025-06-20', supplierName: 'Tech Innovators Inc.', grandTotal: '5500000', items: [{ particulars: 'Laptop', quantity: '2', unitPrice: '2750000', amount: '5500000' }], modeOfPayment: 'Cheque', preparedBy: 'P. Officer', verifiedBy: 'S. Visor', verifiedDate: '2025-06-21', approvedBy: 'G. Manager', authorisedBy: 'H. Secretary' },
-  { id: 2, orderNo: 'LPO-002', orderDate: '2025-06-22', supplierName: 'Office Essentials Ltd.', grandTotal: '450000', items: [{ particulars: 'A4 Paper Ream', quantity: '10', unitPrice: '20000', amount: '200000' }, { particulars: 'Box of Pens', quantity: '5', unitPrice: '50000', amount: '250000' }], modeOfPayment: 'Bank Transfer', preparedBy: 'P. Officer', verifiedBy: 'S. Visor', verifiedDate: '2025-06-23', approvedBy: 'G. Manager', authorisedBy: 'H. Secretary' },
-  { id: 3, orderNo: 'LPO-003', orderDate: '2025-06-25', supplierName: 'Tech Innovators Inc.', grandTotal: '1200000', items: [{ particulars: '24" Monitor', quantity: '1', unitPrice: '1200000', amount: '1200000' }], modeOfPayment: 'Cheque', preparedBy: 'P. Officer', verifiedBy: 'S. Visor', verifiedDate: '2025-06-26', approvedBy: 'G. Manager', authorisedBy: 'H. Secretary' },
+
+const demoLPOs: DemoLPO[] = [
+  { id: 1, orderNo: 'LPO-001', orderDate: '2025-06-20', supplierName: 'Tech Innovators Inc.', data: { grandTotal: '5500000', items: [{ particulars: 'Laptop', quantity: '2', unitPrice: '2750000', amount: '5500000' }], modeOfPayment: 'Cheque', preparedBy: 'P. Officer', verifiedBy: 'S. Visor', verifiedDate: '2025-06-21', approvedBy: 'G. Manager', authorisedBy: 'H. Secretary', orderNo: 'LPO-001', orderDate: '2025-06-20', supplierName: 'Tech Innovators Inc.', deliveryDate: '', } },
+  { id: 2, orderNo: 'LPO-002', orderDate: '2025-06-22', supplierName: 'Office Essentials Ltd.', data: { grandTotal: '450000', items: [{ particulars: 'A4 Paper Ream', quantity: '10', unitPrice: '20000', amount: '200000' }, { particulars: 'Box of Pens', quantity: '5', unitPrice: '50000', amount: '250000' }], modeOfPayment: 'Bank Transfer', preparedBy: 'P. Officer', verifiedBy: 'S. Visor', verifiedDate: '2025-06-23', approvedBy: 'G. Manager', authorisedBy: 'H. Secretary', orderNo: 'LPO-002', orderDate: '2025-06-22', supplierName: 'Office Essentials Ltd.', deliveryDate: '', } },
+  { id: 3, orderNo: 'LPO-003', orderDate: '2025-06-25', supplierName: 'Tech Innovators Inc.', data: { grandTotal: '1200000', items: [{ particulars: '24" Monitor', quantity: '1', unitPrice: '1200000', amount: '1200000' }], modeOfPayment: 'Cheque', preparedBy: 'P. Officer', verifiedBy: 'S. Visor', verifiedDate: '2025-06-26', approvedBy: 'G. Manager', authorisedBy: 'H. Secretary', orderNo: 'LPO-003', orderDate: '2025-06-25', supplierName: 'Tech Innovators Inc.', deliveryDate: '', } },
 ];
-const demoVouchers = [
+
+const demoVouchers: DemoVoucher[] = [
   {
     id: 1,
     voucherNo: "15467",
     date: "2025-06-10",
-    payee: "UEDCL",
-    chequeNo: "2,372,262",
-    bank: "ABSA",
-    particulars: "Being payment of electricity bills for the 2,372,262 period from 7/05/25 to 7/06/25 on PDN 1242877494324",
-    amount: "2,372,262",
-    amountWords: "Two million, three hundred seventy two thousand, two hundred sixty two shillings only",
-    preparedBy: "Deyong",
-    checkedBy: "Cornel",
-    approvedBy: "",
-    receivedBy: "",
-    honTreasurer: "",
-    honSecretary: "",
+    data: {
+      voucherNo: "15467",
+      date: "2025-06-10",
+      payee: "UEDCL",
+      chequeNo: "2,372,262",
+      bank: "ABSA",
+      particulars: "Being payment of electricity bills for the 2,372,262 period from 7/05/25 to 7/06/25 on PDN 1242877494324",
+      amount: "2,372,262",
+      amountWords: "Two million, three hundred seventy two thousand, two hundred sixty two shillings only",
+      preparedBy: "Deyong",
+      checkedBy: "Cornel",
+      approvedBy: "",
+      receivedBy: "",
+      honTreasurer: "",
+      honSecretary: "",
+    },
   },
 ];
 
 // --- DEFAULTS ---
-type PaymentLineItem = { [key: string]: string; quantity: string; unit: string; particulars: string; unitPrice: string; total: string };
-type LPOItem = { particulars: string; quantity: string; unitPrice: string; amount: string; };
 const defaultLineItem: PaymentLineItem = { quantity: '', unit: '', particulars: '', unitPrice: '', total: '' };
 const defaultLPOItem: LPOItem = { particulars: '', quantity: '', unitPrice: '', amount: '' };
 const defaultApprovals = {
@@ -117,7 +121,7 @@ function formsToCSV(forms: WorkflowForm[]) {
     'ID', 'Title', 'Type', 'Status', 'Current Handler', 'Created', 'Department', 'Requestor', 'Approval Trail'
   ];
   const rows = forms.map(f => {
-    const approvalTrail = (f.history || []).map((h: FormHistoryEntry) => {
+    const approvalTrail = (f.history || []).map((h) => {
       const sig = h.signature ? JSON.parse(h.signature) : {};
       return `${h.role} (${sig.name || ''}) [${h.date}: ${h.action}]`;
     }).join(' | ');
@@ -128,8 +132,8 @@ function formsToCSV(forms: WorkflowForm[]) {
       f.status,
       f.currentRole,
       f.created,
-      f.data?.department || '',
-      f.data?.requestor || '',
+      'type' in f.data && f.data.type === 'requisition' ? f.data.department : '',
+      'type' in f.data && f.data.type === 'requisition' ? f.data.requestor : '',
       approvalTrail
     ];
   });
@@ -159,23 +163,23 @@ export default function ProcurementDashboard() {
   const [typeFilter, setTypeFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   // Payment Requisition
-  const [payments, setPayments] = useState(demoPayments);
+  const [payments, setPayments] = useState<DemoPayment[]>(demoPayments);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({
+  const [paymentForm, setPaymentForm] = useState<PaymentFormData>({
     requestor: "",
     department: "",
     needBy: "",
     subject: "",
     comments: "",
-    signature: null as File | null,
-    lineItems: [ { ...defaultLineItem } as PaymentLineItem ],
+    signature: null,
+    lineItems: [ { ...defaultLineItem } ],
     detailsUnderItems: "",
     approvals: { ...defaultApprovals },
   });
   // LPO
-  const [lpos, setLpos] = useState(demoLPOs);
+  const [lpos, setLpos] = useState<DemoLPO[]>(demoLPOs);
   const [showLPOForm, setShowLPOForm] = useState(false);
-  const [lpoForm, setLpoForm] = useState({
+  const [lpoForm, setLpoForm] = useState<LPOFormData>({
     orderNo: '',
     supplierName: '',
     orderDate: '',
@@ -190,9 +194,24 @@ export default function ProcurementDashboard() {
     authorisedBy: '',
   });
   // Voucher
-  const [vouchers, setVouchers] = useState(demoVouchers);
+  const [vouchers, setVouchers] = useState<DemoVoucher[]>(demoVouchers);
   const [showVoucherForm, setShowVoucherForm] = useState(false);
-  const [voucherForm, setVoucherForm] = useState<any>({ /* ... */ });
+  const [voucherForm, setVoucherForm] = useState<VoucherFormData>({
+    voucherNo: '',
+    date: '',
+    payee: '',
+    chequeNo: '',
+    bank: '',
+    particulars: '',
+    amount: '',
+    amountWords: '',
+    preparedBy: '',
+    checkedBy: '',
+    approvedBy: '',
+    receivedBy: '',
+    honTreasurer: '',
+    honSecretary: '',
+  });
 
   // PDF refs
   const paymentRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -224,16 +243,16 @@ export default function ProcurementDashboard() {
   const uniqueRoles = [...new Set(forms.map(f => f.currentRole))];
 
   // Compute enhanced stats for procurement officer
-  const handledForms = forms.filter(f => f.history.some((h: FormHistoryEntry) => h.role === 'procurement'));
+  const handledForms = forms.filter(f => f.history.some((h) => h.role === 'procurement'));
   const approvedForms = handledForms.filter(f => f.status.toLowerCase().includes('approved'));
   const rejectedForms = handledForms.filter(f => f.status.toLowerCase().includes('rejected'));
   const totalApprovedValue = approvedForms.reduce((sum, f) => {
-    if (!f.data.lineItems) return sum;
+    if (!('lineItems' in f.data) || !Array.isArray(f.data.lineItems)) return sum;
     return sum + f.data.lineItems.reduce((itemSum: number, item: PaymentLineItem) => itemSum + (Number(item.total) || 0), 0);
   }, 0);
   const avgApprovalTime = (() => {
     const times = handledForms.map(f => {
-      const procurementEntry = f.history.find((h: FormHistoryEntry) => h.role === 'procurement');
+      const procurementEntry = f.history.find((h) => h.role === 'procurement');
       if (!procurementEntry) return null;
       const created = new Date(f.created).getTime();
       const approvedDate = new Date(procurementEntry.date).getTime();
@@ -249,7 +268,7 @@ export default function ProcurementDashboard() {
   const itemCounts: Record<string, number> = {};
   forms.forEach((f: WorkflowForm) => {
     // Pie: Requests by Department
-    if (f.data && f.data.department) {
+    if ('department' in f.data && f.data.department) {
       departmentCounts[f.data.department] = (departmentCounts[f.data.department] || 0) + 1;
     }
     // Bar: Requests per Month
@@ -257,8 +276,8 @@ export default function ProcurementDashboard() {
       const month = f.created.slice(0, 7); // YYYY-MM
       monthCounts[month] = (monthCounts[month] || 0) + 1;
     }
-    // Top 5 Items
-    if (f.data && f.data.lineItems) {
+    // Top 5 Items (only for forms with lineItems)
+    if ('lineItems' in f.data && Array.isArray(f.data.lineItems)) {
       f.data.lineItems.forEach((item: PaymentLineItem) => {
         if (item.particulars) {
           itemCounts[item.particulars] = (itemCounts[item.particulars] || 0) + Number(item.quantity || 1);
@@ -314,7 +333,7 @@ export default function ProcurementDashboard() {
     ];
 
     const getStepStatus = (stepRole: string) => {
-      const historyEntry = form.history.find((h: FormHistoryEntry) => h.role === stepRole);
+      const historyEntry = form.history.find((h) => h.role === stepRole);
       const isCurrent = form.currentRole === stepRole;
       const isCompleted = !!historyEntry;
       
@@ -332,7 +351,7 @@ export default function ProcurementDashboard() {
             <span>{form.history.length} of {workflowSteps.length} steps completed</span>
           </div>
           <div className="flex space-x-1">
-            {workflowSteps.map((step, index) => {
+            {workflowSteps.map((step) => {
               const status = getStepStatus(step.role);
               return (
                 <div key={step.role} className="flex-1 h-2 rounded-full overflow-hidden">
@@ -354,10 +373,10 @@ export default function ProcurementDashboard() {
             <div className="text-gray-500 italic">No approvals yet</div>
           ) : (
             <div className="space-y-1">
-              {form.history.map((entry: FormHistoryEntry, index: number) => {
+              {form.history.map((entry) => {
                 const signatureData = entry.signature ? JSON.parse(entry.signature) : null;
                 return (
-                  <div key={index} className="flex items-center justify-between bg-white rounded px-2 py-1 border">
+                  <div key={`${entry.role}-${entry.date}`} className="flex items-center justify-between bg-white rounded px-2 py-1 border">
                     <div className="flex items-center space-x-2">
                       <div className={`w-2 h-2 rounded-full ${
                         entry.role === 'claimant' ? 'bg-blue-500' :
@@ -387,7 +406,7 @@ export default function ProcurementDashboard() {
 
   // --- HANDLERS ---
   // Payment Requisition
-  const handlePaymentLineItemChange = (idx: number, field: string, value: string) => {
+  const handlePaymentLineItemChange = (idx: number, field: keyof PaymentLineItem, value: string) => {
     const updated = [...paymentForm.lineItems];
     updated[idx][field] = value;
     if ((field === 'quantity' || field === 'unitPrice') && updated[idx].quantity && updated[idx].unitPrice) {
@@ -395,11 +414,11 @@ export default function ProcurementDashboard() {
     }
     setPaymentForm({ ...paymentForm, lineItems: updated });
   };
-  const addPaymentLineItem = () => setPaymentForm({ ...paymentForm, lineItems: [...paymentForm.lineItems, { ...defaultLineItem } as PaymentLineItem] });
-  const removePaymentLineItem = (idx: number) => setPaymentForm({ ...paymentForm, lineItems: paymentForm.lineItems.filter((_, i) => i !== idx) });
+  const addPaymentLineItem = () => setPaymentForm({ ...paymentForm, lineItems: [...paymentForm.lineItems, { ...defaultLineItem }] });
+  const removePaymentLineItem = (idx: number) => setPaymentForm({ ...paymentForm, lineItems: paymentForm.lineItems.filter((_item, i) => i !== idx) });
   const handlePaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setPayments([{ ...paymentForm, id: Date.now(), title: paymentForm.subject || "Untitled", status: "Draft (Not Submitted)", created: new Date().toISOString().slice(0, 10) }, ...payments]);
+    setPayments([{ id: Date.now(), title: paymentForm.subject || "Untitled", status: "Draft (Not Submitted)", created: new Date().toISOString().slice(0, 10), data: paymentForm }, ...payments]);
     setShowPaymentForm(false);
   };
   // LPO
@@ -416,19 +435,19 @@ export default function ProcurementDashboard() {
     setLpoForm({ ...lpoForm, items: updated });
   };
   const addLPOItem = () => setLpoForm({ ...lpoForm, items: [...lpoForm.items, { ...defaultLPOItem }] });
-  const removeLPOItem = (idx: number) => setLpoForm({ ...lpoForm, items: lpoForm.items.filter((_, i) => i !== idx) });
+  const removeLPOItem = (idx: number) => setLpoForm({ ...lpoForm, items: lpoForm.items.filter((_item, i) => i !== idx) });
   const handleLPOSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const updated = [...lpoForm.items];
     const grandTotal = updated.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    setLpos([{ ...lpoForm, id: Date.now(), items: updated, grandTotal: String(grandTotal) }, ...lpos]);
+    setLpos([{ id: Date.now(), orderNo: lpoForm.orderNo, orderDate: lpoForm.orderDate, supplierName: lpoForm.supplierName, data: { ...lpoForm, items: updated, grandTotal: String(grandTotal) } }, ...lpos]);
     setShowLPOForm(false);
   };
   // Voucher
   const handleVoucherChange = (field: string, value: string) => setVoucherForm({ ...voucherForm, [field]: value });
   const handleVoucherSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setVouchers([{ ...voucherForm, id: Date.now() }, ...vouchers]);
+    setVouchers([{ id: Date.now(), voucherNo: voucherForm.voucherNo, date: voucherForm.date, data: voucherForm }, ...vouchers]);
     setShowVoucherForm(false);
   };
 
@@ -464,7 +483,7 @@ export default function ProcurementDashboard() {
       };
     }
     acc[supplierName].orderCount += 1;
-    acc[supplierName].totalSpend += Number(lpo.grandTotal) || 0;
+    acc[supplierName].totalSpend += Number(lpo.data.grandTotal) || 0;
     return acc;
   }, {} as Record<string, { name: string; orderCount: number; totalSpend: number }>);
 
@@ -1037,12 +1056,12 @@ export default function ProcurementDashboard() {
               {payments.map((payment) => (
                 <div key={payment.id} ref={el => { paymentRefs.current[payment.id] = el; }} className="bg-white border rounded-xl p-6 shadow max-w-2xl mx-auto text-sm">
                   <div className="flex justify-between mb-2">
-                    <div><span className="font-bold">Requestor:</span> {payment.requestor}</div>
-                    <div><span className="font-bold">Department:</span> {payment.department}</div>
+                    <div><span className="font-bold">Requestor:</span> {payment.data.requestor}</div>
+                    <div><span className="font-bold">Department:</span> {payment.data.department}</div>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <div><span className="font-bold">Need-By Date:</span> {payment.needBy}</div>
-                    <div><span className="font-bold">Subject:</span> {payment.subject}</div>
+                    <div><span className="font-bold">Need-By Date:</span> {payment.data.needBy}</div>
+                    <div><span className="font-bold">Subject:</span> {payment.data.subject}</div>
                   </div>
                   <table className="w-full border text-xs mb-2">
                     <thead>
@@ -1056,7 +1075,7 @@ export default function ProcurementDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {payment.lineItems.map((item, idx) => (
+                      {payment.data.lineItems.map((item, idx) => (
                         <tr key={idx}>
                           <td className="border px-2 py-1 text-center">{idx + 1}</td>
                           <td className="border px-2 py-1">{item.quantity}</td>
@@ -1068,18 +1087,18 @@ export default function ProcurementDashboard() {
                       ))}
                     </tbody>
                   </table>
-                  {payment.detailsUnderItems && (
-                    <div className="mt-2 text-xs italic text-gray-700 border-t pt-2 whitespace-pre-line">{payment.detailsUnderItems}</div>
+                  {payment.data.detailsUnderItems && (
+                    <div className="mt-2 text-xs italic text-gray-700 border-t pt-2 whitespace-pre-line">{payment.data.detailsUnderItems}</div>
                   )}
-                  <div className="mt-4"><span className="font-bold">Comments:</span> {payment.comments}</div>
+                  <div className="mt-4"><span className="font-bold">Comments:</span> {payment.data.comments}</div>
                   <div className="mt-4 flex flex-col gap-1">
                     <span className="font-bold">Approvals:</span>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div><span className="font-semibold">Claimant:</span> {payment.approvals.claimant.name} {payment.approvals.claimant.signed && '✔'} {payment.approvals.claimant.date}</div>
-                      <div><span className="font-semibold">Procurement Officer:</span> {payment.approvals.procurement?.name} {payment.approvals.procurement?.signed && '✔'} {payment.approvals.procurement?.date}</div>
-                      <div><span className="font-semibold">General Manager:</span> {payment.approvals.gm.name} {payment.approvals.gm.signed && '✔'} {payment.approvals.gm.date}</div>
-                      <div><span className="font-semibold">Hon. Secretary:</span> {payment.approvals.secretary.name} {payment.approvals.secretary.signed && '✔'} {payment.approvals.secretary.date}</div>
-                      <div><span className="font-semibold">Hon. Treasurer:</span> {payment.approvals.treasurer.name} {payment.approvals.treasurer.signed && '✔'} {payment.approvals.treasurer.date}</div>
+                      <div><span className="font-semibold">Claimant:</span> {payment.data.approvals.claimant.name} {payment.data.approvals.claimant.signed && '✔'} {payment.data.approvals.claimant.date}</div>
+                      <div><span className="font-semibold">Procurement Officer:</span> {payment.data.approvals.procurement?.name} {payment.data.approvals.procurement?.signed && '✔'} {payment.data.approvals.procurement?.date}</div>
+                      <div><span className="font-semibold">General Manager:</span> {payment.data.approvals.gm.name} {payment.data.approvals.gm.signed && '✔'} {payment.data.approvals.gm.date}</div>
+                      <div><span className="font-semibold">Hon. Secretary:</span> {payment.data.approvals.secretary.name} {payment.data.approvals.secretary.signed && '✔'} {payment.data.approvals.secretary.date}</div>
+                      <div><span className="font-semibold">Hon. Treasurer:</span> {payment.data.approvals.treasurer.name} {payment.data.approvals.treasurer.signed && '✔'} {payment.data.approvals.treasurer.date}</div>
                     </div>
                   </div>
                 </div>
@@ -1088,10 +1107,10 @@ export default function ProcurementDashboard() {
               {lpos.map((lpo) => (
                 <div key={lpo.id} ref={el => { lpoRefs.current[lpo.id] = el; }} className="bg-white border rounded-xl p-6 shadow max-w-2xl mx-auto text-sm">
                   <div className="flex justify-between mb-2">
-                    <div><span className="font-bold">To:</span> {lpo.supplierName}</div>
-                    <div><span className="font-bold">Order Date:</span> {lpo.orderDate}</div>
+                    <div><span className="font-bold">To:</span> {lpo.data.supplierName}</div>
+                    <div><span className="font-bold">Order Date:</span> {lpo.data.orderDate}</div>
                   </div>
-                  <div className="mb-2"><span className="font-bold">Mode of Payment:</span> {lpo.modeOfPayment || ''}</div>
+                  <div className="mb-2"><span className="font-bold">Mode of Payment:</span> {lpo.data.modeOfPayment || ''}</div>
                   <table className="w-full border text-xs mb-2">
                     <thead>
                       <tr className="bg-purple-200">
@@ -1102,7 +1121,7 @@ export default function ProcurementDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {lpo.items.map((item, idx) => (
+                      {lpo.data.items.map((item, idx) => (
                         <tr key={idx}>
                           <td className="border px-2 py-1">{item.quantity}</td>
                           <td className="border px-2 py-1">{item.particulars}</td>
@@ -1112,22 +1131,22 @@ export default function ProcurementDashboard() {
                       ))}
                     </tbody>
                   </table>
-                  <p className="text-right font-bold mb-4">Grand Total: {lpo.grandTotal}</p>
+                  <p className="text-right font-bold mb-4">Grand Total: {lpo.data.grandTotal}</p>
                   <div className="grid grid-cols-2 gap-8 mt-8 text-xs">
                     <div>
-                      <p className="mb-2"><span className="font-bold">Prepared By:</span> {lpo.preparedBy || ''}</p>
+                      <p className="mb-2"><span className="font-bold">Prepared By:</span> {lpo.data.preparedBy || ''}</p>
                       <p>Signature: ___________________ Date: ____________</p>
                     </div>
                     <div>
-                      <p className="mb-2"><span className="font-bold">Verified By:</span> {lpo.verifiedBy || ''} <span className="font-bold ml-4">Date:</span> {lpo.verifiedDate || ''}</p>
+                      <p className="mb-2"><span className="font-bold">Verified By:</span> {lpo.data.verifiedBy || ''} <span className="font-bold ml-4">Date:</span> {lpo.data.verifiedDate || ''}</p>
                       <p>Signature: ___________________</p>
                     </div>
                     <div>
-                      <p className="mb-2"><span className="font-bold">Approved By:</span> {lpo.approvedBy || ''}</p>
+                      <p className="mb-2"><span className="font-bold">Approved By:</span> {lpo.data.approvedBy || ''}</p>
                       <p>Signature: ___________________ Date: ____________</p>
                     </div>
                     <div>
-                      <p className="mb-2"><span className="font-bold">Authorised By:</span> {lpo.authorisedBy || ''}</p>
+                      <p className="mb-2"><span className="font-bold">Authorised By:</span> {lpo.data.authorisedBy || ''}</p>
                       <p>Signature: ___________________ Date: ____________</p>
                     </div>
                   </div>
@@ -1137,20 +1156,20 @@ export default function ProcurementDashboard() {
               {vouchers.map((voucher) => (
                 <div key={voucher.id} ref={el => { voucherRefs.current[voucher.id] = el; }} className="bg-white border rounded-xl p-6 shadow max-w-2xl mx-auto text-sm">
                   <div className="flex justify-between mb-2">
-                    <div><span className="font-bold">Payee:</span> {voucher.payee}</div>
-                    <div><span className="font-bold">Date:</span> {voucher.date}</div>
+                    <div><span className="font-bold">Payee:</span> {voucher.data.payee}</div>
+                    <div><span className="font-bold">Date:</span> {voucher.data.date}</div>
                   </div>
-                  <div className="mb-2"><span className="font-bold">Cheque No.:</span> {voucher.chequeNo} <span className="font-bold ml-4">Bank:</span> {voucher.bank}</div>
-                  <div className="mb-2"><span className="font-bold">Particulars:</span> {voucher.particulars}</div>
-                  <div className="mb-2"><span className="font-bold">Amount:</span> {voucher.amount}</div>
-                  <div className="mb-2"><span className="font-bold">Amount in Words:</span> {voucher.amountWords}</div>
+                  <div className="mb-2"><span className="font-bold">Cheque No.:</span> {voucher.data.chequeNo} <span className="font-bold ml-4">Bank:</span> {voucher.data.bank}</div>
+                  <div className="mb-2"><span className="font-bold">Particulars:</span> {voucher.data.particulars}</div>
+                  <div className="mb-2"><span className="font-bold">Amount:</span> {voucher.data.amount}</div>
+                  <div className="mb-2"><span className="font-bold">Amount in Words:</span> {voucher.data.amountWords}</div>
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                    <div><span className="font-semibold">Prepared By:</span> {voucher.preparedBy}</div>
-                    <div><span className="font-semibold">Checked By:</span> {voucher.checkedBy}</div>
-                    <div><span className="font-semibold">Approved By:</span> {voucher.approvedBy}</div>
-                    <div><span className="font-semibold">Received By:</span> {voucher.receivedBy}</div>
-                    <div><span className="font-semibold">Hon. Treasurer:</span> {voucher.honTreasurer}</div>
-                    <div><span className="font-semibold">Hon. Secretary:</span> {voucher.honSecretary}</div>
+                    <div><span className="font-semibold">Prepared By:</span> {voucher.data.preparedBy}</div>
+                    <div><span className="font-semibold">Checked By:</span> {voucher.data.checkedBy}</div>
+                    <div><span className="font-semibold">Approved By:</span> {voucher.data.approvedBy}</div>
+                    <div><span className="font-semibold">Received By:</span> {voucher.data.receivedBy}</div>
+                    <div><span className="font-semibold">Hon. Treasurer:</span> {voucher.data.honTreasurer}</div>
+                    <div><span className="font-semibold">Hon. Secretary:</span> {voucher.data.honSecretary}</div>
                   </div>
                 </div>
               ))}
