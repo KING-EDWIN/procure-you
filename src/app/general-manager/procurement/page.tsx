@@ -3,8 +3,20 @@
 import React, { useState } from "react";
 import DashboardLayout from "../../dashboard-layout";
 
+// Add proper type definitions at the top
+interface ProcurementItem {
+  id: string;
+  date: string;
+  department: string;
+  requestor: string;
+  items: number;
+  totalAmount: number;
+  status: string;
+  budgeted: string;
+}
+
 // Mock data for General Manager's procurement approvals
-const mockProcurementRequisitions = [
+const mockProcurementRequisitions: ProcurementItem[] = [
   {
     id: "PR-001",
     date: "2024-01-15",
@@ -38,7 +50,7 @@ const mockProcurementRequisitions = [
 ];
 
 export default function GeneralManagerProcurementPage() {
-  const [selectedRequisition, setSelectedRequisition] = useState<any>(null);
+  const [selectedRequisition, setSelectedRequisition] = useState<ProcurementItem | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   const getStatusColor = (status: string) => {
@@ -60,9 +72,15 @@ export default function GeneralManagerProcurementPage() {
       : "bg-orange-100 text-orange-800";
   };
 
-  const handleApprove = (requisition: any) => {
+  const handleApprove = (requisition: ProcurementItem) => {
     setSelectedRequisition(requisition);
     setShowApprovalModal(true);
+  };
+
+  const handleReject = (requisition: ProcurementItem) => {
+    // Placeholder for rejection logic
+    alert(`Rejecting requisition ${requisition.id}`);
+    setShowApprovalModal(false);
   };
 
   return (
@@ -258,7 +276,10 @@ export default function GeneralManagerProcurementPage() {
                     >
                       Cancel
                     </button>
-                    <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                    <button 
+                      onClick={() => handleReject(selectedRequisition)}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                    >
                       Reject
                     </button>
                     <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">

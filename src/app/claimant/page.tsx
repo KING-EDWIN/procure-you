@@ -62,8 +62,8 @@ export default function ClaimantDashboard() {
     setShowForm(false);
   };
 
-  function isRequisitionData(data: any): data is RequisitionFormData & { type: "requisition" } {
-    return data && data.type === "requisition";
+  function isRequisitionData(data: unknown): data is RequisitionFormData & { type: "requisition" } {
+    return Boolean(data && typeof data === 'object' && data !== null && 'type' in data && data.type === "requisition");
   }
   const handleDownloadPDF = async (req: RequisitionFormData | WorkflowForm, id: number) => {
     let data: RequisitionFormData | null = null;
@@ -104,7 +104,7 @@ export default function ClaimantDashboard() {
     const times = approvedForms.map(f => {
       if (!f.history || f.history.length < 2) return null;
       const created = new Date(f.created).getTime();
-      const approved = f.history.find((h: any) => h.action.toLowerCase().includes('approved'));
+      const approved = f.history.find((h) => h.action.toLowerCase().includes('approved'));
       if (!approved) return null;
       const approvedDate = new Date(approved.date).getTime();
       return (approvedDate - created) / (1000 * 60 * 60 * 24); // days
@@ -118,7 +118,7 @@ export default function ClaimantDashboard() {
     const steps = ['claimant', 'supervisor', 'procurement', 'gm', 'secretary', 'treasurer'];
     return (
       <div className="flex items-center gap-1 mt-2">
-        {steps.map((role, idx) => {
+        {steps.map((role) => {
           const done = form.history.some((h) => h.role === role);
           return <span key={role} className={`w-2 h-2 rounded-full ${done ? 'bg-blue-500' : 'bg-gray-200'}`}></span>;
         })}

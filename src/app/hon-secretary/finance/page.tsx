@@ -3,6 +3,17 @@
 import React, { useState } from "react";
 import DashboardLayout from "../../dashboard-layout";
 
+// Add proper type definitions
+interface FinanceItem {
+  id: string;
+  date: string;
+  requestor?: string;
+  supplier?: string;
+  purpose: string;
+  amount: number;
+  status: string;
+}
+
 // Mock data for Hon. Secretary's approval documents
 const mockPaymentRequisitions = [
   {
@@ -36,7 +47,7 @@ const mockLocalPurchaseOrders = [
 
 export default function HonSecretaryFinancePage() {
   const [activeTab, setActiveTab] = useState("payment-requisitions");
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<FinanceItem | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   const getStatusColor = (status: string) => {
@@ -52,8 +63,9 @@ export default function HonSecretaryFinancePage() {
     }
   };
 
-  const handleApprove = (document: any) => {
-    setSelectedDocument(document);
+  // Replace 'any' types
+  const handleApprove = (item: FinanceItem) => {
+    setSelectedItem(item);
     setShowApprovalModal(true);
   };
 
@@ -279,12 +291,12 @@ export default function HonSecretaryFinancePage() {
         </div>
 
         {/* Approval Modal */}
-        {showApprovalModal && selectedDocument && (
+        {showApprovalModal && selectedItem && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Review {selectedDocument.id}</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Review {selectedItem.id}</h3>
                   <button
                     onClick={() => setShowApprovalModal(false)}
                     className="text-gray-400 hover:text-gray-600"
@@ -296,15 +308,15 @@ export default function HonSecretaryFinancePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Requestor/Supplier</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedDocument.requestor || selectedDocument.supplier}</p>
+                      <p className="mt-1 text-sm text-gray-900">{selectedItem.requestor || selectedItem.supplier}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Amount</label>
-                      <p className="mt-1 text-sm text-gray-900">UGX {selectedDocument.amount.toLocaleString()}</p>
+                      <p className="mt-1 text-sm text-gray-900">UGX {selectedItem.amount.toLocaleString()}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Purpose</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedDocument.purpose}</p>
+                      <p className="mt-1 text-sm text-gray-900">{selectedItem.purpose}</p>
                     </div>
                   </div>
                   <div className="flex justify-end space-x-3 pt-4">

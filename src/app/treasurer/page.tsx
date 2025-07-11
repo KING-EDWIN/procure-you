@@ -14,14 +14,12 @@ export default function TreasurerDashboard() {
   const [selectedForm, setSelectedForm] = useState<WorkflowForm | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
-  const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string>("");
 
   // Only show forms where currentRole is 'treasurer'
   const inbox = forms.filter(f => f.currentRole === "treasurer");
 
   // Compute enhanced stats for Treasurer
-  const treasurerName = "Paul Treasurer"; // You can make this dynamic if needed
   const handledForms = forms.filter(f => f.history.some((h) => h.role === 'treasurer'));
   const approvedForms = handledForms.filter(f => f.status.toLowerCase().includes('approved'));
   const rejectedForms = handledForms.filter(f => f.status.toLowerCase().includes('rejected'));
@@ -42,7 +40,7 @@ export default function TreasurerDashboard() {
     const steps = ['claimant', 'supervisor', 'procurement', 'gm', 'secretary', 'treasurer'];
     return (
       <div className="flex items-center gap-1 mt-2">
-        {steps.map((role, idx) => {
+        {steps.map((role) => {
           const done = form.history.some((h) => h.role === role);
           return <span key={role} className={`w-2 h-2 rounded-full ${done ? 'bg-orange-500' : 'bg-gray-200'}`}></span>;
         })}
@@ -54,13 +52,11 @@ export default function TreasurerDashboard() {
     setSelectedForm(form);
     setShowModal(true);
     setName("");
-    setSignatureFile(null);
     setSignatureUrl("");
   };
 
   const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    setSignatureFile(file);
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => setSignatureUrl(ev.target?.result as string);
@@ -77,8 +73,8 @@ export default function TreasurerDashboard() {
   };
 
   // Add a type guard for requisition data:
-  function isRequisitionData(data: any): data is { requestor: string; department: string; needBy: string; subject: string; comments: string; detailsUnderItems: string; lineItems: any[] } {
-    return data && data.type === "requisition";
+  function isRequisitionData(data: unknown): data is { requestor: string; department: string; needBy: string; subject: string; comments: string; detailsUnderItems: string; lineItems: PaymentLineItem[] } {
+    return Boolean(data && typeof data === 'object' && data !== null && 'type' in data && data.type === "requisition");
   }
 
   return (

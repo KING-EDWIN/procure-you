@@ -153,9 +153,6 @@ export default function AccountantFinancePage() {
   function isPaymentRequisition(doc: PaymentRequisition | LocalPurchaseOrder): doc is PaymentRequisition {
     return (doc as PaymentRequisition).requestor !== undefined;
   }
-  function isLocalPurchaseOrder(doc: PaymentRequisition | LocalPurchaseOrder): doc is LocalPurchaseOrder {
-    return (doc as LocalPurchaseOrder).supplier !== undefined;
-  }
 
   return (
     <DashboardLayout userRole="accountant">

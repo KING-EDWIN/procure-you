@@ -56,9 +56,6 @@ const mockLocalPurchaseOrders = [
 function isPaymentRequisition(doc: PaymentRequisition | LocalPurchaseOrder): doc is PaymentRequisition {
   return (doc as PaymentRequisition).requestor !== undefined;
 }
-function isLocalPurchaseOrder(doc: PaymentRequisition | LocalPurchaseOrder): doc is LocalPurchaseOrder {
-  return (doc as LocalPurchaseOrder).supplier !== undefined;
-}
 
 export default function HonTreasurerFinancePage() {
   const [activeTab, setActiveTab] = useState("payment-requisitions");

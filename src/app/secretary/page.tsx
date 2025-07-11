@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useWorkflow, WorkflowForm, PaymentLineItem, RequisitionFormData } from "../workflow-context";
+import { useWorkflow, WorkflowForm, Role, PaymentLineItem } from "../workflow-context";
 
 const roleIcon = (
   <span className="inline-block bg-indigo-100 text-indigo-600 rounded-full p-2 mr-2">
@@ -9,29 +9,23 @@ const roleIcon = (
   </span>
 );
 
-function isRequisitionData(data: any): data is RequisitionFormData & { type: "requisition" } {
-  return data && data.type === "requisition";
-}
-
 export default function SecretaryDashboard() {
   const { forms, signAndSend } = useWorkflow();
   const [selectedForm, setSelectedForm] = useState<WorkflowForm | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
-  const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string>("");
 
   // Only show forms where currentRole is 'secretary'
   const inbox = forms.filter(f => f.currentRole === "secretary");
 
   // Compute enhanced stats for Secretary
-  const secretaryName = "Helen Secretary"; // You can make this dynamic if needed
-  const handledForms = forms.filter(f => f.history.some((h: any) => h.role === 'secretary'));
+  const handledForms = forms.filter(f => f.history.some((h) => h.role === 'secretary'));
   const approvedForms = handledForms.filter(f => f.status.toLowerCase().includes('approved'));
   const rejectedForms = handledForms.filter(f => f.status.toLowerCase().includes('rejected'));
   const avgApprovalTime = (() => {
     const times = handledForms.map(f => {
-      const secretaryEntry = f.history.find((h: any) => h.role === 'secretary');
+      const secretaryEntry = f.history.find((h) => h.role === 'secretary');
       if (!secretaryEntry) return null;
       const created = new Date(f.created).getTime();
       const approvedDate = new Date(secretaryEntry.date).getTime();
@@ -46,8 +40,8 @@ export default function SecretaryDashboard() {
     const steps = ['claimant', 'supervisor', 'procurement', 'gm', 'secretary', 'treasurer'];
     return (
       <div className="flex items-center gap-1 mt-2">
-        {steps.map((role, idx) => {
-          const done = form.history.some((h: any) => h.role === role);
+        {steps.map((role) => {
+          const done = form.history.some((h) => h.role === role);
           return <span key={role} className={`w-2 h-2 rounded-full ${done ? 'bg-indigo-500' : 'bg-gray-200'}`}></span>;
         })}
       </div>
@@ -58,13 +52,11 @@ export default function SecretaryDashboard() {
     setSelectedForm(form);
     setShowModal(true);
     setName("");
-    setSignatureFile(null);
     setSignatureUrl("");
   };
 
   const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    setSignatureFile(file);
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => setSignatureUrl(ev.target?.result as string);
@@ -79,6 +71,11 @@ export default function SecretaryDashboard() {
     signAndSend(id, JSON.stringify({ name, signatureUrl }), "treasurer", "Awaiting Hon. Treasurer Approval");
     setShowModal(false);
   };
+
+  // Add a type guard for requisition data:
+  function isRequisitionData(data: unknown): data is { requestor: string; department: string; needBy: string; subject: string; comments: string; detailsUnderItems: string; lineItems: PaymentLineItem[] } {
+    return Boolean(data && typeof data === 'object' && data !== null && 'type' in data && data.type === "requisition");
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white p-6 flex flex-col items-center">
@@ -191,10 +188,10 @@ export default function SecretaryDashboard() {
               <div className="mb-6">
                 <div className="font-semibold mb-2 text-indigo-900">Approval Trail & Signatures</div>
                 <div className="space-y-2">
-                  {selectedForm.history && selectedForm.history.map((entry: any, idx: number) => {
+                  {selectedForm.history && selectedForm.history.map((entry, index) => {
                     const signatureData = entry.signature ? JSON.parse(entry.signature) : null;
                     return (
-                      <div key={idx} className="flex items-center gap-4 border rounded p-2 bg-indigo-50">
+                      <div key={index} className="flex items-center gap-4 border rounded p-2 bg-indigo-50">
                         <div className="font-semibold capitalize w-32">{entry.role}</div>
                         <div className="flex-1">
                           <div className="text-sm">{signatureData?.name || <span className='italic text-gray-400'>No name</span>}</div>

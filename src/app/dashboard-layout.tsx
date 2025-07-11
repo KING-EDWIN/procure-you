@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface DashboardLayoutProps {
   userRole: string;
@@ -71,12 +72,12 @@ export default function DashboardLayout({ userRole, children }: DashboardLayoutP
               <span className="text-sm text-gray-500">
                 Logged in as: <span className="font-medium text-gray-900">{userRole.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
               </span>
-              <a
+              <Link
                 href="/"
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
                 Logout
-              </a>
+              </Link>
             </div>
           </div>
         </div>

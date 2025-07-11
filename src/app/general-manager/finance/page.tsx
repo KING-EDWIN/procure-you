@@ -3,6 +3,28 @@
 import React, { useState } from "react";
 import DashboardLayout from "../../dashboard-layout";
 
+// Interface definitions
+interface PaymentRequisition {
+  id: string;
+  date: string;
+  department: string;
+  requestor: string;
+  description: string;
+  amount: number;
+  status: string;
+  type: string;
+}
+
+interface LocalPurchaseOrder {
+  id: string;
+  date: string;
+  supplier: string;
+  description: string;
+  amount: number;
+  status: string;
+  type: string;
+}
+
 // Mock data for General Manager's finance approvals
 const mockPaymentRequisitions = [
   {
@@ -49,7 +71,7 @@ const mockLocalPurchaseOrders = [
 ];
 
 export default function GeneralManagerFinancePage() {
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<PaymentRequisition | LocalPurchaseOrder | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [activeTab, setActiveTab] = useState("payment-requisitions");
 
@@ -68,7 +90,7 @@ export default function GeneralManagerFinancePage() {
     }
   };
 
-  const handleApprove = (item: any) => {
+  const handleApprove = (item: PaymentRequisition | LocalPurchaseOrder) => {
     setSelectedItem(item);
     setShowApprovalModal(true);
   };
@@ -211,10 +233,10 @@ export default function GeneralManagerFinancePage() {
                       {item.date}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {activeTab === "payment-requisitions" ? (item as any).department : (item as any).supplier}
+                      {activeTab === "payment-requisitions" ? (item as PaymentRequisition).department : (item as LocalPurchaseOrder).supplier}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {activeTab === "payment-requisitions" ? (item as any).requestor : item.description}
+                      {activeTab === "payment-requisitions" ? (item as PaymentRequisition).requestor : item.description}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {activeTab === "payment-requisitions" ? item.description : ""}
@@ -268,8 +290,8 @@ export default function GeneralManagerFinancePage() {
                       </label>
                       <p className="mt-1 text-sm text-gray-900">
                         {selectedItem.type === "Payment Requisition" 
-                          ? (selectedItem as any).department 
-                          : (selectedItem as any).supplier}
+                          ? (selectedItem as PaymentRequisition).department 
+                          : (selectedItem as LocalPurchaseOrder).supplier}
                       </p>
                     </div>
                     <div>
@@ -278,7 +300,7 @@ export default function GeneralManagerFinancePage() {
                       </label>
                       <p className="mt-1 text-sm text-gray-900">
                         {selectedItem.type === "Payment Requisition" 
-                          ? (selectedItem as any).requestor 
+                          ? (selectedItem as PaymentRequisition).requestor 
                           : selectedItem.description}
                       </p>
                     </div>
